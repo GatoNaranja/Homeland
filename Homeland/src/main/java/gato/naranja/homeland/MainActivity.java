@@ -9,12 +9,15 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.webkit.CookieManager;
+import android.webkit.CookieSyncManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
 import android.webkit.WebChromeClient;
@@ -24,9 +27,16 @@ import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.zxy.recovery.core.Recovery;
+
+import gato.naranja.globalexcaugh.GlobalExCaught_2_0;
+
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private SwipeRefreshLayout srl;
+
+    private SharedPreferences sp;
+    private static final String url = "http://spixii.cn/";
 
 
     @SuppressLint("JavascriptInterface")
@@ -35,9 +45,26 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Recovery.getInstance()
+                .debug(true)
+                .recoverInBackground(false)
+                .recoverStack(true)
+                .mainPage(MainActivity.class)
+                .recoverEnabled(true)
+                .callback(new GlobalExCaught_2_0(MainActivity.this))
+                .silent(true, Recovery.SilentMode.RECOVER_ACTIVITY_STACK)
+//                .skip(MainActivity.class)
+                .init(this);
+
+
+        sp = getSharedPreferences("Spixii", MODE_PRIVATE);
+
+        initViews();
+    }
+
+    private void initViews(){
         webView = findViewById(R.id.webView);
         srl = findViewById(R.id.srl);
-
 
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);//允许使用js
@@ -59,18 +86,24 @@ public class MainActivity extends AppCompatActivity {
 
         srl.setOnRefreshListener(new OnRefresh());
 
-
-
         loadWebPage();
-
     }
 
+    @SuppressLint("JavascriptInterface")
     private void loadWebPage(){
-        webView.loadUrl("http://spixii.cn/");//加载论坛
-
         webView.addJavascriptInterface(this,"android");//添加js监听 这样html就能调用客户端
         webView.setWebChromeClient(webChromeClient);
         webView.setWebViewClient(webViewClient);
+
+        webView.loadUrl(url);//加载论坛
+    }
+
+    private void syncCookies(Context c, String cookie){
+        CookieSyncManager.createInstance(c);
+        CookieManager cm = CookieManager.getInstance();
+        cm.setAcceptCookie(true);
+        cm.setCookie(cookie, null);
+        CookieSyncManager.getInstance().sync();
     }
 
     private class OnRefresh implements SwipeRefreshLayout.OnRefreshListener{
@@ -90,13 +123,15 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {//页面开始加载
             srl.setRefreshing(true);
+            CookieManager cm = CookieManager.getInstance();
+            String cookie = cm.getCookie(url);
+            sp.edit().putString("cookie", cookie).apply();
         }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             return super.shouldOverrideUrlLoading(view, url);
         }
-
     };
 
     //WebChromeClient主要辅助WebView处理Javascript的对话框、网站图标、网站title、加载进度等
@@ -121,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceivedTitle(WebView view, String title) {
             super.onReceivedTitle(view, title);
-            Log.i("ansen","网页标题:"+title);
+            Log.i("Naranja","网页标题:"+title);
         }
 
         //加载进度回调
@@ -132,22 +167,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        Log.i("ansen","是否有上一个页面:"+webView.canGoBack());
+        Log.i("Naranja","是否有上一个页面:"+webView.canGoBack());
         if (webView.canGoBack() && keyCode == KeyEvent.KEYCODE_BACK){//点击返回按钮的时候判断有没有上一页
             webView.goBack(); // goBack()表示返回webView的上一页面
             return true;
         }
         return super.onKeyDown(keyCode,event);
-    }
-
-    /**
-     * JS调用android的方法
-     * @param str
-     * @return
-     */
-    @JavascriptInterface //仍然必不可少
-    public void  getClient(String str){
-        Log.i("ansen","html调用客户端:"+str);
     }
 
     @Override
@@ -157,11 +182,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
+        syncCookies(MainActivity.this, sp.getString("cookie", ""));
+        super.onStop();
+    }
 
+    @Override
+    protected void onDestroy() {
         //释放资源
         webView.destroy();
         webView=null;
+
+        super.onDestroy();
     }
 }
