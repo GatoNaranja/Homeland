@@ -11,7 +11,7 @@
         android:id="@+id/srl"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-        <WebView
+        <gato.naranja.homeland.GNWebView
             android:id="@+id/webView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -19,4 +19,8 @@
             tools:layout_editor_absoluteY="229dp" />
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+    <FrameLayout
+        android:id="@+id/container_for_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
