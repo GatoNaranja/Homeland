@@ -45,7 +45,7 @@ public class GNWebView extends WebView {
         webviewSettings.setAppCacheEnabled(true);
         webviewSettings.setDomStorageEnabled(true);
         webviewSettings.setAllowFileAccess(true);
-        webviewSettings.setAppCacheMaxSize(1024 * 1024 * 8);
+//        webviewSettings.setAppCacheMaxSize(1024 * 1024 * 8);
         webviewSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webviewSettings.setBuiltInZoomControls(true);
         webviewSettings.setJavaScriptEnabled(true);

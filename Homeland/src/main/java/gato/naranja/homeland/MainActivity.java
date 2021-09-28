@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     private SwipeRefreshLayout srl;
 
     public static SharedPreferences sp;
-    private static final String url = "http://spixii.cn/";
+    private static final String url = "http://spixii.cn/topics";
     public static final int REQUEST_SELECT_FILE_CODE = 100;
     private static final int REQUEST_FILE_CHOOSER_CODE = 101;
     private static final int REQUEST_FILE_CAMERA_CODE = 102;
@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
      * 选择图片弹框
      */
     private void showSelectPictrueDialog(final int tag, final WebChromeClient.FileChooserParams fileChooserParams) {
-        selectPicDialog = new BottomSheetDialog(this);
+        selectPicDialog = new BottomSheetDialog(this, R.style.BottomSheetDialogStyle);
         selectPicDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
             @Override
             public void onCancel(DialogInterface dialogInterface) {
