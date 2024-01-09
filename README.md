@@ -21,7 +21,7 @@ Homeland是斯皮克斯社区论坛的名称，Homeland项目就是斯皮克斯�
 ##### 已知问题
 + 不论是否选择记住用户名和密码，用户名和密码都将被记住（待与@ID 沟通）
 ##### 效果成色
-![Homeland](https://github.com/GatoNaranja/Images/blob/main/timg.jpg "Homeland")
+![Homeland](https://raw.githubusercontent.com/GatoNaranja/Images/main/timg.jpg?token=GHSAT0AAAAAACLK2K4QEP6D4EZWB2NFMAHEZM4UO3Q)
 
 ### 相关链接
 [斯皮克斯金刚鹦鹉吧](https://tieba.baidu.com/f?frs=yqtb&kw=%E6%96%AF%E7%9A%AE%E5%85%8B%E6%96%AF%E9%87%91%E5%88%9A%E9%B9%A6%E9%B9%89&traceid=)
