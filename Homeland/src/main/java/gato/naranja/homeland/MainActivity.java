@@ -1,5 +1,7 @@
 package gato.naranja.homeland;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -10,6 +12,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -32,7 +35,7 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.zxy.recovery.core.Recovery;
+//import com.zxy.recovery.core.Recovery;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +43,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
-import gato.naranja.globalexcaugh.GlobalExCaught_2_0;
+//import gato.naranja.globalexcaugh.GlobalExCaught_2_0;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
@@ -68,6 +71,11 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     private boolean mIsOpenCreateWindow;
     private WindowWebFragment mNewWindowWebFragment;
 
+    private ActivityResultLauncher<Intent> fileChooserLauncher;
+    private ActivityResultLauncher<Intent> fileBrowserLauncher;
+    private ActivityResultLauncher<Uri> cameraLauncher;
+    private Uri cameraImageUri; // to hold the temp URI for camera capture
+
 
     @SuppressLint("JavascriptInterface")
     @Override
@@ -75,19 +83,9 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Recovery.getInstance()
-                .debug(true)
-                .recoverInBackground(false)
-                .recoverStack(true)
-                .mainPage(MainActivity.class)
-                .recoverEnabled(true)
-                .callback(new GlobalExCaught_2_0(MainActivity.this))
-                .silent(true, Recovery.SilentMode.RECOVER_ACTIVITY_STACK)
-                .init(this);
-
-
         sp = getSharedPreferences("Spixii", MODE_PRIVATE);
 
+        initFileSelectors();
         initViews();
     }
 
@@ -101,7 +99,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             @Override
             public void openFileChooserCallBack(ValueCallback<Uri> uploadMsg, String acceptType) {
                 mUploadMsg = uploadMsg;
-                showSelectPictrueDialog(0, null);
+                showSelectPictureDialog(0, null);
             }
 
             @Override
@@ -111,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                     mUploadMsgs.onReceiveValue(null);
                 }
                 mUploadMsgs = filePathCallback;
-                showSelectPictrueDialog(1, fileChooserParams);
+                showSelectPictureDialog(1, fileChooserParams);
             }
         });
         webView.setCreateWindowCallBack((view, isDialog, isUserGesture, resultMsg) -> {
@@ -126,6 +124,37 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         webView.loadUrl(url);//加载论坛
     }
 
+    private void initFileSelectors(){
+// Launcher for WebChromeClient file chooser (tag != 0)
+        fileChooserLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (mUploadMsgs == null) return;
+                    Uri[] uris = null;
+                    if (result.getResultCode() == RESULT_OK) {
+                        uris = extractUris(result.getData());
+                    }
+                    // ALWAYS call onReceiveValue — null tells WebView the user cancelled
+                    mUploadMsgs.onReceiveValue(uris);
+                    mUploadMsgs = null;
+                }
+        );
+
+// Launcher for generic file browser (tag == 0, ACTION_GET_CONTENT)
+        fileBrowserLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (mUploadMsgs == null) return;
+                    Uri[] uris = null;
+                    if (result.getResultCode() == RESULT_OK) {
+                        uris = extractUris(result.getData());
+                    }
+                    mUploadMsgs.onReceiveValue(uris);
+                    mUploadMsgs = null;
+                }
+        );
+    }
+
     private void syncCookies(Context c, String cookie){
         CookieSyncManager.createInstance(c);
         CookieManager cm = CookieManager.getInstance();
@@ -137,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     /**
      * 选择图片弹框
      */
-    private void showSelectPictrueDialog(final int tag, final WebChromeClient.FileChooserParams fileChooserParams) {
+    private void showSelectPictureDialog(final int tag, final WebChromeClient.FileChooserParams fileChooserParams) {
         selectPicDialog = new BottomSheetDialog(this, R.style.BottomSheetDialogStyle);
         selectPicDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
             @Override
@@ -153,17 +182,20 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         ImageButton shoot = view.findViewById(R.id.shoot);
         ImageButton gallery = view.findViewById(R.id.gallery);
 
-        gallery.setOnClickListener(view12 -> {
+        gallery.setOnClickListener(v -> {
             if (tag == 0) {
+                // Generic file browser
                 Intent i = new Intent(Intent.ACTION_GET_CONTENT);
                 i.addCategory(Intent.CATEGORY_OPENABLE);
                 i.setType("*/*");
-                startActivityForResult(Intent.createChooser(i, "File Browser"), REQUEST_FILE_CHOOSER_CODE);
+                fileBrowserLauncher.launch(Intent.createChooser(i, "File Browser"));
             } else {
+                // WebChromeClient-provided intent
                 try {
                     Intent intent = fileChooserParams.createIntent();
-                    startActivityForResult(intent, REQUEST_SELECT_FILE_CODE);
+                    fileChooserLauncher.launch(intent);
                 } catch (ActivityNotFoundException e) {
+                    mUploadMsgs.onReceiveValue(null); // ← always cancel cleanly
                     mUploadMsgs = null;
                 }
             }
@@ -173,7 +205,6 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             takeCameraPhoto();
             selectPicDialog.dismiss();
         });
-//        cancel.setOnClickListener(view13 -> selectPicDialog.dismiss());
 
         selectPicDialog.setContentView(view);
         selectPicDialog.show();
@@ -293,6 +324,35 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 mUploadMsgs = null;
             }
         }
+    }
+
+    /**
+     * Safely extracts URIs from a file picker result Intent.
+     * Handles: single getData(), multi-select ClipData, and null data.
+     * Returns null if no URIs could be extracted (treated as cancel by WebView).
+     */
+    @Nullable
+    private Uri[] extractUris(@Nullable Intent data) {
+        if (data == null) return null;
+
+        // 1. Multiple files via ClipData (multi-select, Android 13+ Photo Picker)
+        if (data.getClipData() != null) {
+            ClipData clipData = data.getClipData();
+            int count = clipData.getItemCount();
+            if (count == 0) return null;
+            Uri[] uris = new Uri[count];
+            for (int i = 0; i < count; i++) {
+                uris[i] = clipData.getItemAt(i).getUri();
+            }
+            return uris;
+        }
+
+        // 2. Single file via getData()
+        if (data.getData() != null) {
+            return new Uri[]{ data.getData() };
+        }
+
+        return null;
     }
 
 

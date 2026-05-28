@@ -40,9 +40,9 @@ public class GNWebView extends WebView {
         // 自适应屏幕大小
         webviewSettings.setUseWideViewPort(true);
         webviewSettings.setLoadWithOverviewMode(true);
-        String cacheDirPath = getContext().getFilesDir().getAbsolutePath() + "cache/";
-        webviewSettings.setAppCachePath(cacheDirPath);
-        webviewSettings.setAppCacheEnabled(true);
+//        String cacheDirPath = getContext().getFilesDir().getAbsolutePath() + "cache/";
+//        webviewSettings.setAppCachePath(cacheDirPath);
+//        webviewSettings.setAppCacheEnabled(true);
         webviewSettings.setDomStorageEnabled(true);
         webviewSettings.setAllowFileAccess(true);
 //        webviewSettings.setAppCacheMaxSize(1024 * 1024 * 8);
